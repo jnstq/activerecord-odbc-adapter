@@ -1129,7 +1129,7 @@ begin
 
             if lastColOfIndex
               indexes << IndexDefinition.new(table_name, 
-                activeRecIdentCase(indexName), isUnique, indexCols)
+                "index_#{table_name}_on_#{indexCols.join('_and_')}#{'_uniq' if isUnique}", isUnique, indexCols)
             end
           end
           indexes
@@ -1522,7 +1522,14 @@ begin
           rColDescs = stmt.columns(true)
           rRows = stmt.fetch_all          
           stmt.drop
-          ActiveRecord::Result.new(rColDescs.map { |c| activeRecIdentCase(c.name) }, rRows)
+
+          rRows.each do |values| 
+            values.map! { |v| convertOdbcValToGenericVal(v) }
+          end
+
+          rColDescs.map! { |c| activeRecIdentCase(c.name) }
+
+          ActiveRecord::Result.new(rColDescs, rRows)
         end
         
         # Maps a DBMS name to a symbol.

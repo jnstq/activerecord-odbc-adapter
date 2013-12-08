@@ -44,7 +44,7 @@ module ODBCExt
     if primary
       primary.columns[0]
     else
-      raise StandardError, "No valid primary key found for #{table}"
+      nil
     end
   end
 
@@ -67,5 +67,35 @@ module ODBCExt
   def quoted_false
     'TRUE'
   end
+
+  def convertOdbcValToGenericVal(value)
+    val = super(value)
+    if String === val
+      val.force_encoding(encoding).encode('UTF-8')
+    else
+      val
+    end
+  end
+
+  def quote(value, column = nil)
+    val = if column && column.type == :string
+      content = "#{value}_DBISAM_HACK"
+      "SUBSTRING(#{super(content, column)} FROM 1 FOR #{value.length})"
+    else
+      super(value, column)
+    end
+    if String === val
+      val.force_encoding('UTF-8').encode(encoding).force_encoding('ASCII-8BIT')
+    end
+  end
+
+  # Returns a table's primary key and belonging sequence.
+  def pk_and_sequence_for(table)
+    columns(table).each do |column|
+      return [column.name, nil] if column.sql_type == "AUTOINC"
+    end
+    nil
+  end
+
 
 end
